@@ -1,4 +1,4 @@
-__mode__ = 'debug' # prod
+__mode__ = 'prod' # prod
 
 # create utils
 def flip_coords(polygon):
@@ -27,6 +27,7 @@ if __mode__ == 'prod':
 
 # init Sanic app
 import libgeo
+import numpy as np
 from sanic import Sanic
 from sanic.response import json
 
@@ -34,8 +35,24 @@ app = Sanic('PRFApplication')
 @app.post('/api/get_polygon_population')
 async def polygon_query(request):
     polygon = request.json['geometry']['coordinates'][0]
-    tile_range = libgeo.query_included_tiles(move_coords(flip_coords(polygon)), 0.008333333333333333)
+    tile_info = libgeo.query_included_tiles(move_coords(flip_coords(polygon)), 0.008333333333333333)
     
+    file_index = 1
     
+    result = [[] for _ in range(0, 8)]
     
-    return json(body={}, status=200)
+    for each_block in tile_info:
+        if len(each_block) == 0:
+            file_index += 1
+            continue
+        with open(f'gpw_v4_population_count_rev11_2020_30_sec_{file_index}.asc', 'r') as file:
+            for row in each_block:
+                file.seek(indices[file_index - 1][row[0]])
+                line = file.readline()
+                population_data = np.fromstring(line, dtype=float, count=row[1][-1][1] + 1)
+                result.append([row[0], row[1], [population_data[r[0]:r[1] + 1] for r in row[1]]])
+        file_index += 1
+    
+    return json(body={
+        'res': result
+    }, status=200)
