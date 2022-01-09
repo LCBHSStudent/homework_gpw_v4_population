@@ -49,8 +49,10 @@ async def polygon_query(request):
             for row in each_block:
                 file.seek(indices[file_index - 1][row[0]])
                 line = file.readline()
-                population_data = np.fromstring(line, dtype=float, count=row[1][-1][1] + 1)
-                result.append([row[0], row[1], [population_data[r[0]:r[1] + 1] for r in row[1]]])
+                population_data = [float(data) for data in line.split(' ', maxsplit=row[1][-1][1] + 1)[:-1]] # np.fromstring(line, dtype=float, count=row[1][-1][1] + 1)
+                # print(len(population_data), row[1][-1][1])
+                # print(row[1][-1][1] - row[1][0][0], len(population_data))
+                result[file_index - 1].append([row[0], row[1], [population_data[r[0]:r[1] + 1] for r in row[1]]])
         file_index += 1
     
     return json(body={
